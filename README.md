@@ -1,5 +1,13 @@
 <p align="center">
-  <img src="docs/assets/aethi-banner.svg" alt="aethi" width="100%" />
+  <img src="https://raw.githubusercontent.com/xelioodev/aethi/main/docs/assets/aethi-logo-mark-128.png" alt="aethi logo" width="88" />
+</p>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/xelioodev/aethi/main/docs/assets/aethi-wordmark.svg" alt="aethi wordmark" width="520" />
+</p>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/xelioodev/aethi/main/docs/assets/aethi-banner.svg" alt="aethi protocol banner" width="100%" />
 </p>
 
 # aethi
