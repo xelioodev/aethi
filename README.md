@@ -14,20 +14,36 @@ Aethi is a compact onchain game protocol for seasonal play.
 
 Players stake AETHI, mint signed item NFTs, join live seasons, commit battle actions, earn resolved score, and claim rewards from season pools. The contracts keep token supply, item ownership, staking access, game state, and auxiliary rewards separated.
 
-## Contracts
+<p align="center">
+  <img src="docs/assets/protocol-map.svg" alt="Aethi protocol map" width="100%" />
+</p>
 
-| Contract | Purpose |
+## Protocol
+
+| Module | Contract | Purpose |
 | --- | --- |
-| `AethiToken` | Capped ERC20 with permit, pausing, and role-gated minting. |
-| `AethiItems` | ERC721 item collection with EIP-712 mint authorizations. |
-| `AethiStaking` | Single-token staking vault with reward periods, reward-per-share accounting, and unstake cooldown. |
-| `AethiGame` | Season lifecycle, entry checks, stake snapshots, battle actions, item boosts, score resolution, and reward claims. |
-| `AethiRewardDistributor` | Controlled vault for direct reward distributions. |
+| Token | `AethiToken` | Capped ERC20 with permit, pausing, and role-gated minting. |
+| Items | `AethiItems` | ERC721 equipment with EIP-712 mint authorizations, classes, action affinity, and finite charges. |
+| Staking | `AethiStaking` | Single-token staking vault with reward periods, reward-per-share accounting, and unstake cooldown. |
+| Game | `AethiGame` | Season lifecycle, stake snapshots, battle action commits, signed result resolution, claims, cancellation, and dust sweep. |
+| Rewards | `AethiRewardDistributor` | Controlled vault for direct reward distributions outside season pools. |
 
-## Flow
+## Gameplay Loop
 
 ```text
-stake AETHI -> mint signed item -> join season -> equip item -> commit action -> resolve battle -> claim rewards
+Acquire AETHI
+    ↓
+Stake for access
+    ↓
+Mint signed equipment
+    ↓
+Join a season
+    ↓
+Equip item and commit battle action
+    ↓
+Resolve signed match result
+    ↓
+Claim season rewards
 ```
 
 ## Design
@@ -39,22 +55,26 @@ stake AETHI -> mint signed item -> join season -> equip item -> commit action ->
 - Battle rounds require player action commits and signed match results before resolution.
 - Items can carry classes, action affinity, finite charges, and bounded boost power.
 - Season rewards are escrowed when a season is created and paid pro-rata after finalization.
+- Season managers can cancel not-yet-started seasons and sweep reward dust after the claim window.
 - Privileged actions are split across admin, signer, operator, season, reward, and pause roles.
 - The game contract does not use block values for randomness.
 
-## Layout
+## Repository
 
 ```text
 src/
-  game/
+  game/        Season and battle protocol
   interfaces/
-  items/
-  rewards/
-  staking/
-  token/
+  items/       Equipment NFTs
+  rewards/     Direct reward vault
+  staking/     Staking vault
+  token/       AETHI token
 
 docs/
   architecture.md
+  game-mechanics.md
+  economics.md
+  operations.md
   threat-model.md
 ```
 
