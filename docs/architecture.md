@@ -1,109 +1,97 @@
 # Aethi Architecture
 
-Aethi is a modular GameFi protocol for season-based gameplay. The system keeps token economics, item ownership, staking access, score management, and reward distribution in separate contracts.
+Aethi separates the game economy into small contracts with clear ownership boundaries: token supply, item issuance, staking, season state, and direct reward operations.
 
-## Game model
+## Core Model
 
-Aethi seasons are competitive campaigns. Players stake AETHI to qualify for participation, mint signed item NFTs, equip one item for score boosts, and compete for a funded reward pool.
+Players stake AETHI before entering a season. When a player joins, the game snapshots their current stake and the season's economic settings. That snapshot is used for the whole season, so later admin configuration changes do not alter active season rules.
 
-The game avoids using block values as randomness. Season progress and score updates are recorded by a trusted operator in the current version. This model is explicit and can be upgraded later with signed score attestations, oracle-backed game results, or verifiable off-chain proofs.
+Each round has a small battle loop:
 
-## Player flow
+1. the player commits an action: strike, guard, or focus
+2. the operator signs a match result containing the base score
+3. the contract applies action, streak, stake, and item modifiers
+4. the resulting score is added to the season total
+
+The final recorded score can include bounded modifiers:
+
+- action bonus based on the committed battle action
+- win streak bonus capped after five wins
+- stake boost, derived from stake above the season minimum and capped per season
+- item boost, derived from one equipped charged item NFT
+
+The game contract does not use block values for randomness.
 
 ```text
-Player
-  ├─ stakes AETHI in AethiStaking
-  ├─ receives signed item authorization off-chain
-  ├─ mints item NFT in AethiItems
-  ├─ joins a season in AethiGame
-  ├─ equips one item for the season
-  └─ claims token rewards after season finalization
+base match score
+  + battle action modifier
+  + win streak modifier
+  + stake snapshot modifier
+  + equipped item modifier
+  = season score
 ```
 
-## Contract overview
+## Contracts
 
 ### AethiToken
 
-`AethiToken` is the protocol ERC20 token.
-
-Features:
-
-- immutable supply cap
-- initial supply mint
-- role-gated minting
-- pausable transfers
-- ERC20 Permit support
+Capped ERC20 used for staking, entry fees, rewards, and operational distributions. Minting and pausing are role-gated.
 
 ### AethiItems
 
-`AethiItems` is the ERC721 item collection used by the game.
-
-Items can represent game passes, score modifiers, badges, access objects, or campaign rewards. Minting requires an EIP-712 signature from an account with `ITEM_SIGNER_ROLE`.
-
-The signed mint payload includes:
-
-- player address
-- item type
-- item power in basis points
-- metadata URI hash
-- player nonce
-- deadline
-
-This protects against replay, limits stale authorizations, and allows the game backend or operations process to issue item rewards without exposing admin privileges.
+ERC721 item collection. Item mints require EIP-712 authorization from an item signer. Each authorization binds the player, item type, item class, action affinity, boost value, charges, metadata hash, nonce, and deadline.
 
 ### AethiStaking
 
-`AethiStaking` is a single-token staking vault.
+Single-token staking vault with reward-per-share accounting. It supports:
 
-It serves two purposes:
+- time-based reward periods
+- no iteration over stakers
+- claimable reward checkpoints
+- configurable unstake cooldown
+- emergency withdrawal after cooldown
 
-- eligibility for season participation
-- time-based AETHI rewards
-
-Rewards use accumulated reward-per-share accounting. Stake, unstake, and claim operations do not loop through all users.
+The cooldown makes stake commitments meaningful for season access while keeping withdrawals deterministic.
 
 ### AethiGame
 
-`AethiGame` manages competitive seasons.
+Season coordinator. It handles:
 
-A season contains:
-
-- start timestamp
-- end timestamp
-- escrowed reward pool
-- total score
-- finalized state
-
-Players must satisfy the minimum staking requirement before joining. A joined player can equip one item NFT. When an operator records score, the equipped item boost is applied:
-
-```text
-boostedScore = baseScore * (10_000 + itemPowerBps) / 10_000
-```
-
-After the season ends, the season manager finalizes the season. Player rewards are calculated pro-rata:
-
-```text
-reward = seasonRewardPool * playerScore / totalSeasonScore
-```
+- season creation with escrowed rewards
+- per-season snapshots for minimum stake, entry fee, treasury, and stake boost cap
+- participant stake snapshots at join time
+- item equip checks
+- battle action commitments
+- signed battle result verification
+- batch battle resolution
+- action expiry
+- action and streak modifiers
+- boosted score accounting
+- season cancellation
+- finalization and pro-rata reward claims
+- dust sweep after claim window
 
 ### AethiRewardDistributor
 
-`AethiRewardDistributor` is a controlled reward vault for bonus distributions, campaigns, grants, and operational reward programs. It is intentionally separate from season reward pools.
+Controlled vault for direct rewards outside season pools.
 
-## System Map
+## State Flow
 
 ```text
 AethiToken
-  ├─ staking token for AethiStaking
-  ├─ reward token for AethiStaking
-  ├─ fee and reward token for AethiGame
-  └─ payout token for AethiRewardDistributor
+  -> staked in AethiStaking
+  -> paid as AethiGame entry fees
+  -> escrowed as season reward pools
+  -> distributed by AethiRewardDistributor
 
 AethiItems
-  └─ read by AethiGame for item ownership and score boost power
+  -> minted with signed authorization
+  -> equipped in AethiGame
+  -> read during battle resolution
 
 AethiStaking
-  └─ read by AethiGame for season eligibility
+  -> exposes stakedBalanceOf(account)
+  -> read by AethiGame when a player joins
 ```
 
 ## Roles
@@ -112,22 +100,23 @@ AethiStaking
 | --- | --- | --- |
 | `DEFAULT_ADMIN_ROLE` | all role-based contracts | Grants and revokes roles. |
 | `MINTER_ROLE` | `AethiToken` | Mints AETHI up to the cap. |
-| `PAUSER_ROLE` | token, items, staking, game, distributor | Pauses emergency-sensitive actions. |
+| `PAUSER_ROLE` | token, items, staking, game, distributor | Pauses sensitive operations. |
 | `ITEM_SIGNER_ROLE` | `AethiItems` | Signs item mint authorizations. |
 | `METADATA_MANAGER_ROLE` | `AethiItems` | Updates item metadata URI. |
-| `REWARD_MANAGER_ROLE` | `AethiStaking` | Funds staking reward periods. |
+| `REWARD_MANAGER_ROLE` | `AethiStaking` | Funds reward periods and configures staking parameters. |
 | `SEASON_MANAGER_ROLE` | `AethiGame` | Creates and finalizes seasons. |
 | `GAME_OPERATOR_ROLE` | `AethiGame` | Records player score. |
-| `DISTRIBUTOR_ROLE` | `AethiRewardDistributor` | Sends funded bonus rewards. |
+| `DISTRIBUTOR_ROLE` | `AethiRewardDistributor` | Sends funded direct rewards. |
 
-## Deployment
+## Invariants To Preserve
 
-The deploy script creates:
-
-1. `AethiToken`
-2. `AethiItems`
-3. `AethiStaking`
-4. `AethiGame`
-5. `AethiRewardDistributor`
-
-It also connects `AethiItems` to `AethiGame` so the game can read item ownership and item power.
+- Season reward pools are escrowed before a season is announced.
+- A participant's stake snapshot never changes after joining a season.
+- Admin config changes only affect future seasons.
+- Item boosts cannot be used after the equipped item leaves the player wallet.
+- A resolved battle must correspond to a player-committed round action.
+- A battle result must be signed by an account with `GAME_OPERATOR_ROLE`.
+- Battle streaks reset on a loss.
+- Item charges decrease when an item contributes its boost.
+- Staking reward accounting must update before any change to total staked principal.
+- No user-facing loop should depend on the number of players or stakers.

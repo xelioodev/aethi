@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity ^0.8.35;
 
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -41,6 +41,9 @@ contract AethiStaking is IAethiStaking, AccessControl, Pausable, ReentrancyGuard
     /// @notice Duration used for newly funded reward periods.
     uint256 public rewardsDuration;
 
+    /// @notice Delay after staking before the position can be withdrawn.
+    uint256 public unstakeCooldown;
+
     /// @notice Last timestamp included in reward accounting.
     uint256 public lastRewardTime;
 
@@ -54,6 +57,7 @@ contract AethiStaking is IAethiStaking, AccessControl, Pausable, ReentrancyGuard
     }
 
     mapping(address account => UserInfo info) private _users;
+    mapping(address account => uint256 timestamp) public unstakeAvailableAt;
 
     /// @notice Emitted when a user stakes tokens.
     event Staked(address indexed user, uint256 amount);
@@ -70,7 +74,11 @@ contract AethiStaking is IAethiStaking, AccessControl, Pausable, ReentrancyGuard
     /// @notice Emitted when the reward duration changes.
     event RewardsDurationUpdated(uint256 duration);
 
+    /// @notice Emitted when the unstake cooldown changes.
+    event UnstakeCooldownUpdated(uint256 cooldown);
+
     error InvalidAmount();
+    error PositionLocked(uint256 availableAt);
     error InvalidDuration();
     error RewardPeriodActive();
     error ZeroAddress();
@@ -79,7 +87,14 @@ contract AethiStaking is IAethiStaking, AccessControl, Pausable, ReentrancyGuard
     /// @param rewardToken_ Token paid as rewards.
     /// @param admin Account receiving admin, reward manager, and pauser roles.
     /// @param rewardsDuration_ Default reward period duration for funded rewards.
-    constructor(IERC20 stakingToken_, IERC20 rewardToken_, address admin, uint256 rewardsDuration_) {
+    /// @param unstakeCooldown_ Delay before newly staked tokens can be withdrawn.
+    constructor(
+        IERC20 stakingToken_,
+        IERC20 rewardToken_,
+        address admin,
+        uint256 rewardsDuration_,
+        uint256 unstakeCooldown_
+    ) {
         if (address(stakingToken_) == address(0) || address(rewardToken_) == address(0) || admin == address(0)) {
             revert ZeroAddress();
         }
@@ -90,6 +105,7 @@ contract AethiStaking is IAethiStaking, AccessControl, Pausable, ReentrancyGuard
         stakingToken = stakingToken_;
         rewardToken = rewardToken_;
         rewardsDuration = rewardsDuration_;
+        unstakeCooldown = unstakeCooldown_;
         lastRewardTime = block.timestamp;
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
@@ -111,6 +127,7 @@ contract AethiStaking is IAethiStaking, AccessControl, Pausable, ReentrancyGuard
         user.amount += amount;
         totalStaked += amount;
         user.rewardDebt = (user.amount * accRewardPerShare) / ACC_REWARD_PRECISION;
+        unstakeAvailableAt[msg.sender] = block.timestamp + unstakeCooldown;
 
         stakingToken.safeTransferFrom(msg.sender, address(this), amount);
         emit Staked(msg.sender, amount);
@@ -122,6 +139,9 @@ contract AethiStaking is IAethiStaking, AccessControl, Pausable, ReentrancyGuard
         UserInfo storage user = _users[msg.sender];
         if (amount == 0 || amount > user.amount) {
             revert InvalidAmount();
+        }
+        if (block.timestamp < unstakeAvailableAt[msg.sender]) {
+            revert PositionLocked(unstakeAvailableAt[msg.sender]);
         }
 
         _updatePool();
@@ -157,10 +177,15 @@ contract AethiStaking is IAethiStaking, AccessControl, Pausable, ReentrancyGuard
     /// @notice Withdraws staked tokens without claiming rewards.
     /// @dev This is intended as a safety exit during emergencies or integration failures.
     function emergencyWithdraw() external nonReentrant {
+        _updatePool();
+
         UserInfo storage user = _users[msg.sender];
         uint256 amount = user.amount;
         if (amount == 0) {
             revert InvalidAmount();
+        }
+        if (block.timestamp < unstakeAvailableAt[msg.sender]) {
+            revert PositionLocked(unstakeAvailableAt[msg.sender]);
         }
 
         totalStaked -= amount;
@@ -211,6 +236,13 @@ contract AethiStaking is IAethiStaking, AccessControl, Pausable, ReentrancyGuard
 
         rewardsDuration = duration;
         emit RewardsDurationUpdated(duration);
+    }
+
+    /// @notice Updates the unstake cooldown applied to future and newly topped-up positions.
+    /// @param cooldown New cooldown in seconds.
+    function setUnstakeCooldown(uint256 cooldown) external onlyRole(REWARD_MANAGER_ROLE) {
+        unstakeCooldown = cooldown;
+        emit UnstakeCooldownUpdated(cooldown);
     }
 
     /// @notice Pauses new staking and reward funding.

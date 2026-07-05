@@ -42,7 +42,7 @@ Aethi uses explicit privileged roles. These roles should be assigned carefully, 
 | --- | --- |
 | Admin | Can grant and revoke protocol roles. |
 | Item signer | Can authorize NFT item mints. |
-| Game operator | Can record player scores. |
+| Game operator | Can sign battle result attestations. |
 | Season manager | Can create and finalize seasons. |
 | Reward manager | Can fund staking reward periods. |
 | Distributor | Can send funded bonus rewards. |
@@ -74,13 +74,27 @@ Mitigations:
 
 ### Game Operator Misbehavior
 
-The current game model trusts operators to record accurate scores.
+The current game model trusts operators to sign accurate battle results.
 
 Mitigations:
 
 - score updates are emitted as events
+- battle results are EIP-712 typed attestations
+- submitted results must match a committed player action and round
+- attestations include deadlines
 - operator role is separate from admin
 - future versions can add signed score attestations, oracle-backed results, dispute windows, or verifiable game proofs
+
+### Item Boost Abuse
+
+Items can affect battle score.
+
+Mitigations:
+
+- item power is capped
+- item boosts only apply when the item is still owned by the player
+- action affinity limits which actions can receive a boost
+- battle charges are consumed when an item contributes
 
 ### Reward Accounting Errors
 
@@ -92,6 +106,7 @@ Mitigations:
 - reward operations do not loop over all users
 - reward periods are explicitly funded
 - tests cover staking, unstaking, claiming, and reward accrual
+- season dust can be swept only after the claim window closes
 
 ### Timestamp Sensitivity
 

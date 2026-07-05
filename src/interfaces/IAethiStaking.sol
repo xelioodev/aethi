@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity ^0.8.35;
 
 /// @title IAethiStaking
 /// @notice Minimal staking interface consumed by the game layer.

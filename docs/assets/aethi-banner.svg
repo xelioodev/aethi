@@ -1,21 +1,21 @@
 <svg width="1200" height="360" viewBox="0 0 1200 360" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
   <title id="title">Aethi repository banner</title>
-  <desc id="desc">A clean technical banner for the Aethi protocol.</desc>
-  <rect width="1200" height="360" rx="24" fill="#0F1720"/>
-  <path d="M0 72H1200M0 144H1200M0 216H1200M0 288H1200M120 0V360M240 0V360M360 0V360M480 0V360M600 0V360M720 0V360M840 0V360M960 0V360M1080 0V360" stroke="#22313E" stroke-width="1"/>
+  <desc id="desc">A minimal banner for the Aethi protocol.</desc>
+  <rect width="1200" height="360" rx="24" fill="#101418"/>
+  <path d="M72 288H1128" stroke="#2C333A" stroke-width="1"/>
   <rect x="72" y="72" width="160" height="160" rx="36" fill="#151F2A" stroke="#344756"/>
   <path d="M104 176L135 112H153L184 176H163L157 163H131L125 176H104ZM138 147H150L144 134L138 147Z" fill="#F2B84B"/>
   <path d="M129 176V112H184V130H150V137H178V154H150V160H186V176H129Z" fill="#DDE7EC"/>
   <text x="280" y="137" fill="#F7FAFC" font-family="Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="56" font-weight="780">aethi</text>
-  <text x="282" y="181" fill="#A8BAC5" font-family="Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="22" font-weight="520">Seasonal GameFi protocol for staking, signed items, and score-based rewards.</text>
+  <text x="282" y="181" fill="#A8BAC5" font-family="Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="22" font-weight="520">Seasonal battles, stake snapshots, signed items, and reward pools.</text>
   <g transform="translate(282 224)">
     <rect width="112" height="36" rx="8" fill="#192532" stroke="#334756"/>
-    <text x="18" y="24" fill="#DDE7EC" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="14" font-weight="650">ERC20</text>
+    <text x="18" y="24" fill="#DDE7EC" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="14" font-weight="650">stake</text>
     <rect x="128" width="112" height="36" rx="8" fill="#192532" stroke="#334756"/>
-    <text x="146" y="24" fill="#DDE7EC" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="14" font-weight="650">ERC721</text>
+    <text x="146" y="24" fill="#DDE7EC" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="14" font-weight="650">battle</text>
     <rect x="256" width="112" height="36" rx="8" fill="#192532" stroke="#334756"/>
-    <text x="274" y="24" fill="#DDE7EC" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="14" font-weight="650">EIP-712</text>
+    <text x="274" y="24" fill="#DDE7EC" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="14" font-weight="650">items</text>
     <rect x="384" width="112" height="36" rx="8" fill="#192532" stroke="#334756"/>
-    <text x="402" y="24" fill="#DDE7EC" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="14" font-weight="650">Foundry</text>
+    <text x="402" y="24" fill="#DDE7EC" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="14" font-weight="650">rewards</text>
   </g>
 </svg>

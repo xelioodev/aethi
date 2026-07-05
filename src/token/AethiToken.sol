@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity ^0.8.35;
 
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -7,7 +7,7 @@ import {ERC20Pausable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC2
 import {ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 
 /// @title AethiToken
-/// @notice ERC20 token for the Aethi GameFi economy.
+/// @notice ERC20 token for the Aethi game economy.
 /// @dev The token uses role-based minting and an immutable cap to avoid unbounded emissions.
 contract AethiToken is ERC20, ERC20Pausable, ERC20Permit, AccessControl {
     /// @notice Role allowed to mint new AETHI up to the immutable cap.

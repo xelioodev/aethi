@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity ^0.8.35;
 
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
@@ -10,6 +10,7 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import {Nonces} from "@openzeppelin/contracts/utils/Nonces.sol";
 
+import {AethiItemTypes} from "./AethiItemTypes.sol";
 import {IAethiItems} from "../interfaces/IAethiItems.sol";
 
 /// @title AethiItems
@@ -25,23 +26,39 @@ contract AethiItems is IAethiItems, ERC721, ERC721Pausable, ERC721URIStorage, EI
     /// @notice Role allowed to update item metadata.
     bytes32 public constant METADATA_MANAGER_ROLE = keccak256("METADATA_MANAGER_ROLE");
 
-    /// @notice Maximum allowed item score boost in basis points.
-    uint256 public constant MAX_POWER_BPS = 5_000;
+    /// @notice Role allowed to consume item charges during gameplay.
+    bytes32 public constant ITEM_CONSUMER_ROLE = keccak256("ITEM_CONSUMER_ROLE");
 
-    bytes32 public constant MINT_AUTHORIZATION_TYPEHASH = keccak256(
-        "MintAuthorization(address player,uint256 itemType,uint256 powerBps,bytes32 uriHash,uint256 nonce,uint256 deadline)"
-    );
+    /// @notice Maximum allowed item score boost in basis points.
+    uint256 public constant MAX_POWER_BPS = AethiItemTypes.MAX_POWER_BPS;
+
+    /// @notice Maximum charges assigned to a gameplay item.
+    uint256 public constant MAX_CHARGES = AethiItemTypes.MAX_CHARGES;
+
+    bytes32 public constant MINT_AUTHORIZATION_TYPEHASH = AethiItemTypes.MINT_AUTHORIZATION_TYPEHASH;
 
     uint256 private _nextTokenId = 1;
     mapping(uint256 tokenId => uint256 powerBps) private _itemPower;
+    mapping(uint256 tokenId => uint8 classId) private _itemClass;
+    mapping(uint256 tokenId => uint8 affinity) private _actionAffinity;
+    mapping(uint256 tokenId => uint256 charges) private _itemCharges;
     mapping(uint256 tokenId => uint256 itemType) public itemTypes;
 
     event ItemMinted(
-        address indexed player, uint256 indexed tokenId, uint256 indexed itemType, uint256 powerBps, string tokenUri
+        address indexed player,
+        uint256 indexed tokenId,
+        uint256 indexed itemType,
+        uint8 itemClass,
+        uint8 actionAffinity,
+        uint256 powerBps,
+        uint256 charges,
+        string tokenUri
     );
     event ItemURIUpdated(uint256 indexed tokenId, string tokenUri);
+    event ItemChargeConsumed(uint256 indexed tokenId, uint256 remainingCharges);
 
     error AuthorizationExpired();
+    error NoCharges();
     error InvalidPower();
     error InvalidSignature();
     error ZeroAddress();
@@ -56,6 +73,7 @@ contract AethiItems is IAethiItems, ERC721, ERC721Pausable, ERC721URIStorage, EI
         _grantRole(ITEM_SIGNER_ROLE, admin);
         _grantRole(PAUSER_ROLE, admin);
         _grantRole(METADATA_MANAGER_ROLE, admin);
+        _grantRole(ITEM_CONSUMER_ROLE, admin);
     }
 
     /// @notice Mints an item using an off-chain authorization signed by an item signer.
@@ -70,7 +88,10 @@ contract AethiItems is IAethiItems, ERC721, ERC721Pausable, ERC721URIStorage, EI
     function mintWithSignature(
         address player,
         uint256 itemType,
+        uint8 itemClass_,
+        uint8 actionAffinity_,
         uint256 powerBps,
+        uint256 charges,
         string calldata tokenUri,
         uint256 nonce,
         uint256 deadline,
@@ -85,8 +106,13 @@ contract AethiItems is IAethiItems, ERC721, ERC721Pausable, ERC721URIStorage, EI
         if (powerBps > MAX_POWER_BPS) {
             revert InvalidPower();
         }
+        if (charges > MAX_CHARGES) {
+            revert InvalidPower();
+        }
 
-        bytes32 digest = hashMintAuthorization(player, itemType, powerBps, tokenUri, nonce, deadline);
+        bytes32 digest = hashMintAuthorization(
+            player, itemType, itemClass_, actionAffinity_, powerBps, charges, tokenUri, nonce, deadline
+        );
         address signer = ECDSA.recoverCalldata(digest, signature);
         if (!hasRole(ITEM_SIGNER_ROLE, signer)) {
             revert InvalidSignature();
@@ -97,11 +123,14 @@ contract AethiItems is IAethiItems, ERC721, ERC721Pausable, ERC721URIStorage, EI
         tokenId = _nextTokenId++;
         itemTypes[tokenId] = itemType;
         _itemPower[tokenId] = powerBps;
+        _itemClass[tokenId] = itemClass_;
+        _actionAffinity[tokenId] = actionAffinity_;
+        _itemCharges[tokenId] = charges;
 
         _safeMint(player, tokenId);
         _setTokenURI(tokenId, tokenUri);
 
-        emit ItemMinted(player, tokenId, itemType, powerBps, tokenUri);
+        emit ItemMinted(player, tokenId, itemType, itemClass_, actionAffinity_, powerBps, charges, tokenUri);
     }
 
     /// @notice Updates the metadata URI for an item.
@@ -117,14 +146,26 @@ contract AethiItems is IAethiItems, ERC721, ERC721Pausable, ERC721URIStorage, EI
     function hashMintAuthorization(
         address player,
         uint256 itemType,
+        uint8 itemClass_,
+        uint8 actionAffinity_,
         uint256 powerBps,
+        uint256 charges,
         string calldata tokenUri,
         uint256 nonce,
         uint256 deadline
     ) public view returns (bytes32) {
         bytes32 structHash = keccak256(
             abi.encode(
-                MINT_AUTHORIZATION_TYPEHASH, player, itemType, powerBps, keccak256(bytes(tokenUri)), nonce, deadline
+                MINT_AUTHORIZATION_TYPEHASH,
+                player,
+                itemType,
+                itemClass_,
+                actionAffinity_,
+                powerBps,
+                charges,
+                keccak256(bytes(tokenUri)),
+                nonce,
+                deadline
             )
         );
 
@@ -135,6 +176,39 @@ contract AethiItems is IAethiItems, ERC721, ERC721Pausable, ERC721URIStorage, EI
     function itemPower(uint256 tokenId) external view returns (uint256) {
         _requireOwned(tokenId);
         return _itemPower[tokenId];
+    }
+
+    /// @inheritdoc IAethiItems
+    function itemClass(uint256 tokenId) external view returns (uint8) {
+        _requireOwned(tokenId);
+        return _itemClass[tokenId];
+    }
+
+    /// @inheritdoc IAethiItems
+    function actionAffinity(uint256 tokenId) external view returns (uint8) {
+        _requireOwned(tokenId);
+        return _actionAffinity[tokenId];
+    }
+
+    /// @inheritdoc IAethiItems
+    function itemCharges(uint256 tokenId) external view returns (uint256) {
+        _requireOwned(tokenId);
+        return _itemCharges[tokenId];
+    }
+
+    /// @inheritdoc IAethiItems
+    function consumeItemCharge(uint256 tokenId) external onlyRole(ITEM_CONSUMER_ROLE) {
+        _requireOwned(tokenId);
+        uint256 charges = _itemCharges[tokenId];
+        if (charges == 0) {
+            revert NoCharges();
+        }
+
+        unchecked {
+            _itemCharges[tokenId] = charges - 1;
+        }
+
+        emit ItemChargeConsumed(tokenId, charges - 1);
     }
 
     /// @inheritdoc IAethiItems

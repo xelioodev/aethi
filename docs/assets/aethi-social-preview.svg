@@ -1,19 +1,19 @@
 <svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
   <title id="title">Aethi social preview</title>
-  <desc id="desc">A clean social preview for the Aethi protocol repository.</desc>
-  <rect width="1200" height="630" fill="#0F1720"/>
-  <path d="M0 126H1200M0 252H1200M0 378H1200M0 504H1200M150 0V630M300 0V630M450 0V630M600 0V630M750 0V630M900 0V630M1050 0V630" stroke="#22313E" stroke-width="1"/>
+  <desc id="desc">A minimal social preview for Aethi.</desc>
+  <rect width="1200" height="630" fill="#101418"/>
+  <path d="M92 478H1108" stroke="#2C333A" stroke-width="1"/>
   <rect x="92" y="112" width="184" height="184" rx="40" fill="#151F2A" stroke="#344756"/>
   <path d="M130 232L172 148H196L238 232H210L202 215H166L158 232H130ZM176 193H192L184 176L176 193Z" fill="#F2B84B"/>
   <path d="M164 232V148H236V171H191V181H228V203H191V211H239V232H164Z" fill="#DDE7EC"/>
   <text x="336" y="188" fill="#F7FAFC" font-family="Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="84" font-weight="800">aethi</text>
-  <text x="342" y="250" fill="#A8BAC5" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="28" font-weight="520">A seasonal GameFi protocol for staking, signed items, and rewards.</text>
+  <text x="342" y="250" fill="#A8BAC5" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="28" font-weight="520">Seasonal battles, stake snapshots, signed items, and reward pools.</text>
   <g transform="translate(342 334)">
     <rect width="170" height="48" rx="10" fill="#192532" stroke="#334756"/>
-    <text x="24" y="31" fill="#DDE7EC" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="17" font-weight="650">ERC20 staking</text>
+    <text x="24" y="31" fill="#DDE7EC" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="17" font-weight="650">stake access</text>
     <rect x="190" width="178" height="48" rx="10" fill="#192532" stroke="#334756"/>
-    <text x="214" y="31" fill="#DDE7EC" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="17" font-weight="650">signed ERC721</text>
+    <text x="214" y="31" fill="#DDE7EC" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="17" font-weight="650">battle actions</text>
     <rect x="388" width="158" height="48" rx="10" fill="#192532" stroke="#334756"/>
-    <text x="412" y="31" fill="#DDE7EC" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="17" font-weight="650">season pools</text>
+    <text x="412" y="31" fill="#DDE7EC" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="17" font-weight="650">item boosts</text>
   </g>
 </svg>
